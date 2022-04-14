@@ -17,7 +17,7 @@ const Template: Story = () => <SampleApp />;
 
 export const Default = Template.bind({});
 Default.story = {
-  parameters: {
-    msw: handlers,
-  },
+  // parameters: {
+  //   msw: handlers,
+  // },
 };

@@ -4,7 +4,7 @@ export function UserInfo() {
   const { user, logout } = useAuth();
   return (
     <div>
-      Welcome {user.name}
+      Welcome {user.email}
       <button onClick={() => logout()}>Log Out</button>
     </div>
   );

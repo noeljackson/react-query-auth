@@ -19,8 +19,8 @@ export type RegisterCredentials = {
 };
 
 async function handleUserResponse(data) {
-  const { jwt, user } = data;
-  storage.setToken(jwt);
+  const { accessToken, refreshToken, user } = data;
+  storage.setToken(accessToken);
   return user;
 }
 
