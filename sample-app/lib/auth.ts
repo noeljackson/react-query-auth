@@ -21,6 +21,7 @@ export type RegisterCredentials = {
 async function handleUserResponse(data) {
   const { accessToken, refreshToken, user } = data;
   storage.setToken(accessToken);
+  storage.setRefreshToken(refreshToken);
   return user;
 }
 

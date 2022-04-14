@@ -12,18 +12,16 @@ export interface User {
   name?: string;
 }
 
-export async function handleApiResponse(response) {
-  const data = await response;
-  console.log(data);
-  if (response) {
-    return data;
-  } else {
+export async function handleApiResponse(data) {
+  if (data.errors !== undefined) {
     return Promise.reject(data);
+  } else {
+    return data;
   }
 }
 
-export async function getUserProfile() {
-  const data = await request(
+export async function getUserProfile(): Promise<User> {
+  return await request(
     'http://localhost:4000/graphql',
     gql`
       query {
@@ -37,13 +35,13 @@ export async function getUserProfile() {
     {
       Authorization: `Bearer ${storage.getToken()}`,
     }
-  );
-  return data.me;
+  ).then(handleApiResponse).then((data): User => data.me);
+  
 }
 
 export async function loginWithEmailAndPassword(user): Promise<AuthResponse> {
   console.log('USER---', user);
-  const { login } = await request(
+  return await request(
     'http://localhost:4000/graphql',
     gql`
       mutation {
@@ -57,8 +55,8 @@ export async function loginWithEmailAndPassword(user): Promise<AuthResponse> {
         }
       }
     `
-  );
-  return login;
+  ).then(handleApiResponse).then((data): AuthResponse => data.login);
+  
 }
 
 export async function registerWithEmailAndPassword(
