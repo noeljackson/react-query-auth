@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # react-query-auth
 
 [![NPM](https://img.shields.io/npm/v/react-query-auth.svg)](https://www.npmjs.com/package/react-query-auth)
@@ -281,3 +282,6 @@ export const App = () => {
 ## LICENSE
 
 MIT
+=======
+# react-query-auth
+>>>>>>> 3ebbc2ea9c086b69dd301c5e8a05e172210e90c9
