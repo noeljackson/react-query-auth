@@ -1,9 +1,8 @@
-<<<<<<< HEAD
-# react-query-auth
+# react-query-auth-graphql
 
 [![NPM](https://img.shields.io/npm/v/react-query-auth.svg)](https://www.npmjs.com/package/react-query-auth)
 
-Authenticate your react applications easily with react-query.
+Authenticate your react applications easily with react-query and graphql.
 
 ## Introduction
 
