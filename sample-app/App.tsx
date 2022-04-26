@@ -5,5 +5,10 @@ import { useAuth } from './lib/auth';
 
 export function App() {
   const { user } = useAuth();
-  return user ? <UserInfo /> : <Auth />;
+  return (
+    <div>
+      {user && <UserInfo />}
+      <Auth />
+    </div>
+  );
 }

@@ -1,11 +1,12 @@
-import { initReactQueryAuth } from '../../src';
+import { initReactQueryAuth } from './react-query-auth';
 import {
-  getUserProfile,
+  loadUser,
   registerWithEmailAndPassword,
   loginWithEmailAndPassword,
+  refreshToken,
   User,
-} from '../api';
-import { storage } from '../utils';
+} from './api';
+import { storage } from './utils';
 
 export type LoginCredentials = {
   email: string;
@@ -18,44 +19,75 @@ export type RegisterCredentials = {
   password: string;
 };
 
-async function handleUserResponse(data) {
-  const { accessToken, refreshToken, user } = data;
-  storage.setToken(accessToken);
-  storage.setRefreshToken(refreshToken);
-  return user;
+export interface Token {
+  accessToken: number;
+  refreshToken: number;
 }
 
-async function loadUser() {
-  let user = null;
+// async function handleTokenResponse(token) {
+//   storage.setToken(token);
+//   return token;
+// }
 
-  if (storage.getToken()) {
-    const data = await getUserProfile();
-    user = data;
-  }
-  return user;
+async function loadUserFn(token: Token) {
+  const response = await loadUser(token);
+  return response;
 }
 
 async function loginFn(data: LoginCredentials) {
   const response = await loginWithEmailAndPassword(data);
-  const user = await handleUserResponse(response);
-  return user;
+  // const token = await handleTokenResponse(response);
+  return response;
 }
 
 async function registerFn(data: RegisterCredentials) {
   const response = await registerWithEmailAndPassword(data);
-  const user = await handleUserResponse(response);
-  return user;
+  // const token = await handleTokenResponse(response);
+  return response;
+}
+
+async function refreshFn(token: Token) {
+  console.log('refreshFn', token)
+  const response = await refreshToken(token.refreshToken);
+  // const token = await handleTokenResponse(response);
+  return response;
 }
 
 async function logoutFn() {
   await storage.clearToken();
 }
+const tokenDate = (token) => JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString()).exp * 1000;
+
+const tokenExpired = (token: Token) => {
+  const now = new Date().getTime();
+  console.log('token expired', now, tokenDate(token.accessToken), tokenDate(token.accessToken) - now)
+  return token.accessToken < now;
+};
+
+const refreshExpired = (token: Token) => {
+  const now = new Date().getTime();
+  console.log('refresh token expired time:', now, tokenDate(token.refreshToken), tokenDate(token.refreshToken) - now)
+  return token.refreshToken < now;
+};
+
+const shouldRefreshOnBackground = (token: Token) => {
+  const REFRESH_TIME_BEFORE_EXPIRE = 1000;
+
+  const now = new Date().getTime();
+  console.log('shouldRefreshOnBackground', tokenDate(token.accessToken) - REFRESH_TIME_BEFORE_EXPIRE, now, now > tokenDate(token.accessToken) - REFRESH_TIME_BEFORE_EXPIRE)
+  return now > token.accessToken - REFRESH_TIME_BEFORE_EXPIRE;
+};
 
 const authConfig = {
-  loadUser,
+  tokenExpired,
+  refreshExpired,
+  loadUserFn,
   loginFn,
   registerFn,
+  refreshFn,
   logoutFn,
+  shouldRefreshOnBackground,
+  refreshExpiredError: new Error('401-Refresh token expired'),
 };
 
 const { AuthProvider, AuthConsumer, useAuth } = initReactQueryAuth<
