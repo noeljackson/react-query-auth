@@ -33,10 +33,10 @@ export interface AuthContextValue<
   RegisterCredentials = unknown
 > {
   user: User | undefined;
-  login: UseMutateAsyncFunction<User, any, LoginCredentials>;
+  login: UseMutateAsyncFunction<Token, any, LoginCredentials>;
   logout: UseMutateAsyncFunction<any, any, void, any>;
-  register: UseMutateAsyncFunction<User, any, RegisterCredentials>;
-  refresh: UseMutateAsyncFunction<User, any, void, any>;
+  register: UseMutateAsyncFunction<Token, any, RegisterCredentials>;
+  refresh: UseMutateAsyncFunction<Token, any, LoginCredentials, any>;
   isLoggingIn: boolean;
   isLoggingOut: boolean;
   isRegistering: boolean;
@@ -54,6 +54,9 @@ export interface AuthContextValue<
 export interface AuthProviderProps {
   children: React.ReactNode;
 }
+
+let tokenRefreshIntervalHandler: any;
+    let tokenRefreshInterval: number = 5000;
 
 export function initReactQueryAuth<
   User = unknown,
@@ -90,8 +93,7 @@ export function initReactQueryAuth<
   function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     const queryClient = useQueryClient();
 
-    let tokenRefreshIntervalHandler: any;
-    let tokenRefreshInterval: number = 5000;
+    
 
     const getTokenFromStorage = () => {
       const storedValue = localStorage.getItem(queryKey);
@@ -126,6 +128,7 @@ export function initReactQueryAuth<
       }
 
       if (shouldRefreshOnBackground && shouldRefreshOnBackground(token)) {
+        console.log('getToken - shouldRefreshOnBackground');
         refresh();
       }
 
@@ -174,7 +177,7 @@ export function initReactQueryAuth<
             'logged in... start refresh interval',
             tokenRefreshInterval
           );
-          startBackgroundRefreshing();
+          startBackgroundRefreshing('login');
         }
         refetchUser();
       },
@@ -191,21 +194,35 @@ export function initReactQueryAuth<
       },
     });
 
-    const startBackgroundRefreshing = () => {
+    const startBackgroundRefreshing = (stamp) => {
+      console.log('1 background refreshing', tokenRefreshIntervalHandler);
+      if(tokenRefreshIntervalHandler !== undefined) {
       clearInterval(tokenRefreshIntervalHandler);
-
+      }
       tokenRefreshIntervalHandler = setInterval(() => {
+        console.log('stamp', tokenRefreshIntervalHandler, stamp);
         refresh();
       }, tokenRefreshInterval);
+      console.log('2 background refreshing', tokenRefreshIntervalHandler);
+      
     };
 
     const refresh = async () => {
-      const token = (await getToken()) as Token;
+      
+      const token = (await getTokenFromStorage()) as Token;
+      
       if (token) {
-        console.log('start interval', 'run mutation', shouldRefreshOnBackground(token));
-        const { refreshToken } = token;
-        if (refreshToken) {
-          refreshMutation.mutateAsync({ refreshToken: refreshToken });
+        console.log('running refresh', token, shouldRefreshOnBackground(token));
+        if (shouldRefreshOnBackground && shouldRefreshOnBackground(token)) {
+          console.log(
+            'start interval',
+            'run mutation',
+            shouldRefreshOnBackground(token)
+          );
+          const { refreshToken } = token;
+          if (refreshToken) {
+            refreshMutation.mutateAsync({ refreshToken: refreshToken });
+          }
         }
       }
     };
@@ -224,8 +241,9 @@ export function initReactQueryAuth<
     const logoutMutation = useMutation({
       mutationFn: logoutFn,
       onSuccess: () => {
-        queryClient.clear();
         stopBackgroundRefreshing();
+        queryClient.clear();
+        
       },
     });
 
@@ -264,7 +282,25 @@ export function initReactQueryAuth<
       ]
     );
 
-    // if (isSuccess || !waitInitial) {
+    const token = getTokenFromStorage();
+
+    if (token) setTokenValue(token);
+
+    if (isSuccess && token !== undefined) {
+      console.log("tokenRefreshIntervalHandler", tokenRefreshIntervalHandler)
+      if(tokenRefreshIntervalHandler === undefined) 
+      {
+        console.log('success', tokenRefreshIntervalHandler)  
+        startBackgroundRefreshing('user success getToken');
+      }
+    }
+
+    if (error || !token || refreshExpired(token)) {
+      setTokenValue(undefined);
+
+      console.log('there is no token or error in fetching user', token);
+    }
+
     return (
       <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
     );

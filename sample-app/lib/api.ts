@@ -1,6 +1,6 @@
 import { storage } from './utils';
 import { request, gql } from 'graphql-request';
-import { Token } from './auth';
+import { LoginCredentials, Token } from './auth';
 
 
 export interface User {
@@ -56,7 +56,7 @@ export async function loginWithEmailAndPassword(user): Promise<Token> {
 }
 
 export async function registerWithEmailAndPassword(
-  data
+  data: LoginCredentials
 ): Promise<AuthResponse> {
   return window
     .fetch('/auth/register', {
