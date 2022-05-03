@@ -56,7 +56,7 @@ export interface AuthProviderProps {
 }
 
 let tokenRefreshIntervalHandler: any;
-    let tokenRefreshInterval: number = 5000;
+let tokenRefreshInterval: number = 5000;
 
 export function initReactQueryAuth<
   User = unknown,
@@ -92,8 +92,6 @@ export function initReactQueryAuth<
 
   function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     const queryClient = useQueryClient();
-
-    
 
     const getTokenFromStorage = () => {
       const storedValue = localStorage.getItem(queryKey);
@@ -160,18 +158,43 @@ export function initReactQueryAuth<
         return loadUserFn(token);
       },
       onSuccess: (data: User) => {
-        getToken();
+        
+
+        const token = getToken();
+
+        if (token) setTokenValue(token);
+
+        if (isSuccess && token !== undefined) {
+          console.log(
+            'tokenRefreshIntervalHandler',
+            tokenRefreshIntervalHandler
+          );
+          if (tokenRefreshIntervalHandler === undefined) {
+            console.log('success', tokenRefreshIntervalHandler);
+            startBackgroundRefreshing('user success getToken');
+          }
+        }
       },
+      onError: (err: Error) => {
+        const token = getToken();
+        if (error || !token || refreshExpired(token)) {
+          setTokenValue(undefined);
+
+          console.log('there is no token or error in fetching user', token);
+        }
+      }
     });
     const queryKey = 'token';
 
     const loginMutation = useMutation({
       mutationFn: loginFn,
       onSuccess: token => {
+        // set token
         if (token !== undefined) {
           setTokenValue(token);
         }
 
+        // start background refresh
         if (tokenRefreshInterval) {
           console.log(
             'logged in... start refresh interval',
@@ -194,23 +217,21 @@ export function initReactQueryAuth<
       },
     });
 
-    const startBackgroundRefreshing = (stamp) => {
+    const startBackgroundRefreshing = stamp => {
       console.log('1 background refreshing', tokenRefreshIntervalHandler);
-      if(tokenRefreshIntervalHandler !== undefined) {
-      clearInterval(tokenRefreshIntervalHandler);
+      if (tokenRefreshIntervalHandler !== undefined) {
+        clearInterval(tokenRefreshIntervalHandler);
       }
       tokenRefreshIntervalHandler = setInterval(() => {
         console.log('stamp', tokenRefreshIntervalHandler, stamp);
         refresh();
       }, tokenRefreshInterval);
       console.log('2 background refreshing', tokenRefreshIntervalHandler);
-      
     };
 
     const refresh = async () => {
-      
-      const token = (await getTokenFromStorage()) as Token;
-      
+      const token = await getTokenFromStorage() as Token;
+
       if (token) {
         console.log('running refresh', token, shouldRefreshOnBackground(token));
         if (shouldRefreshOnBackground && shouldRefreshOnBackground(token)) {
@@ -243,7 +264,6 @@ export function initReactQueryAuth<
       onSuccess: () => {
         stopBackgroundRefreshing();
         queryClient.clear();
-        
       },
     });
 
@@ -282,24 +302,9 @@ export function initReactQueryAuth<
       ]
     );
 
-    const token = getTokenFromStorage();
-
-    if (token) setTokenValue(token);
-
-    if (isSuccess && token !== undefined) {
-      console.log("tokenRefreshIntervalHandler", tokenRefreshIntervalHandler)
-      if(tokenRefreshIntervalHandler === undefined) 
-      {
-        console.log('success', tokenRefreshIntervalHandler)  
-        startBackgroundRefreshing('user success getToken');
-      }
-    }
-
-    if (error || !token || refreshExpired(token)) {
-      setTokenValue(undefined);
-
-      console.log('there is no token or error in fetching user', token);
-    }
+    React.useEffect(() => {
+      console.log('test effect mount');
+    }, []);
 
     return (
       <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
